@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Project specific
+pki/
+*.pem
+*.log
+*.pass
+*.txt
+!policy.txt
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
