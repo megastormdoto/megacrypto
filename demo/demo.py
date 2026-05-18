@@ -1,7 +1,3 @@
-"""
-MicroPKI end-to-end demo (Sprint 8).
-Uses a temp directory under the system TEMP folder to avoid OneDrive/locking issues on Windows.
-"""
 import json
 import os
 import shutil
@@ -26,7 +22,6 @@ def _rmtree_compat(path: Path) -> None:
 
     if not path.exists():
         return
-    # Python 3.12+: onexc; older: onerror
     try:
         shutil.rmtree(path, onexc=lambda f, q, e: _chmod_and_retry(f, q, e))
     except TypeError:
@@ -69,11 +64,10 @@ def run_cmd(cmd, env=None, check=True, expect_failure=False):
 
 def main():
     print("========================================")
-    print("      MicroPKI Demonstration Script     ")
+    print("      Megacrypto PKI Demonstration      ")
     print("========================================")
 
-    # Work in TEMP — avoids PermissionError deleting demo_pki under OneDrive/Git folder on Windows
-    workspace = Path(tempfile.mkdtemp(prefix="micropki_demo_"))
+    workspace = Path(tempfile.mkdtemp(prefix="megacrypto_demo_"))
     demo_pki = workspace / "demo_pki"
     demo_secrets = workspace / "demo_secrets"
 
@@ -83,7 +77,6 @@ def main():
     try:
         print(f"\n--- Demo workspace (ephemeral): {workspace} ---")
 
-        # 1. Setup Environment
         print("\n--- 1. Setting up Environment ---")
         demo_pki.mkdir(parents=True)
         demo_secrets.mkdir(parents=True)
@@ -95,7 +88,6 @@ def main():
 
         micropki_cmd = [sys.executable, "-m", "micropki"]
 
-        # 2. Initialise the Root CA
         print("\n--- 2. Initialising Root CA ---")
         run_cmd(micropki_cmd + [
             "ca", "init",
@@ -106,7 +98,6 @@ def main():
             "--validity-days", "3650",
         ])
 
-        # 3. Initialise the Intermediate CA
         print("\n--- 3. Initialising Intermediate CA ---")
         run_cmd(micropki_cmd + [
             "ca", "issue-intermediate",
@@ -121,7 +112,6 @@ def main():
             "--pathlen", "0",
         ])
 
-        # 4. Issue Server, Client, and OCSP Certificates
         print("\n--- 4. Issuing Certificates ---")
         run_cmd(micropki_cmd + [
             "ca", "issue-cert",
@@ -155,12 +145,11 @@ def main():
             "--db-path", str(demo_pki / "micropki.db"),
         ])
 
-        # 5. Start Servers
         print("\n--- 5. Starting Repo and OCSP Servers ---")
         repo_proc = subprocess.Popen(
             micropki_cmd + [
                 "repo", "serve",
-                "--host", "127.0.0.1", "--port", "8080",
+                "--host", "127.0.0.1", "--port", "8443",
                 "--db-path", str(demo_pki / "micropki.db"),
                 "--cert-dir", str(demo_pki / "certs"),
             ],
@@ -170,7 +159,7 @@ def main():
         ocsp_proc = subprocess.Popen(
             micropki_cmd + [
                 "ocsp", "serve",
-                "--host", "127.0.0.1", "--port", "8081",
+                "--host", "127.0.0.1", "--port", "8888",
                 "--db-path", str(demo_pki / "micropki.db"),
                 "--responder-cert", str(demo_pki / "certs" / "Demo_OCSP_Responder.cert.pem"),
                 "--responder-key", str(demo_pki / "certs" / "Demo_OCSP_Responder.key.pem"),
@@ -180,21 +169,19 @@ def main():
             stderr=subprocess.DEVNULL,
         )
 
-        _wait_tcp("127.0.0.1", 8080)
-        _wait_tcp("127.0.0.1", 8081)
+        _wait_tcp("127.0.0.1", 8443)
+        _wait_tcp("127.0.0.1", 8888)
 
-        # 6. Perform Validation
         print("\n--- 6. Performing Certificate Validation (OCSP & CRL) ---")
         run_cmd(micropki_cmd + [
             "client", "validate",
             "--cert", str(demo_pki / "certs" / "demo.example.com.cert.pem"),
             "--untrusted", str(demo_pki / "certs" / "intermediate.cert.pem"),
             "--trusted", str(demo_pki / "certs" / "ca.cert.pem"),
-            "--ocsp", "--ocsp-url", "http://127.0.0.1:8081",
+            "--ocsp", "--ocsp-url", "http://127.0.0.1:8888",
             "--mode", "full",
         ])
 
-        # 6b. Policy enforcement — invalid SAN for template must be rejected
         print("\n--- 6b. Policy Enforcement (reject invalid request) ---")
         bad = run_cmd(
             micropki_cmd + [
@@ -217,7 +204,6 @@ def main():
             print("[FAIL] Policy violation should have failed issuance.")
             sys.exit(1)
 
-        # 7. Revoke Certificate
         print("\n--- 7. Revoking Server Certificate ---")
         res = run_cmd(micropki_cmd + [
             "ca", "list-certs", "--db-path", str(demo_pki / "micropki.db"), "--format", "json",
@@ -244,7 +230,7 @@ def main():
                     "--cert", str(demo_pki / "certs" / "demo.example.com.cert.pem"),
                     "--untrusted", str(demo_pki / "certs" / "intermediate.cert.pem"),
                     "--trusted", str(demo_pki / "certs" / "ca.cert.pem"),
-                    "--ocsp", "--ocsp-url", "http://127.0.0.1:8081",
+                    "--ocsp", "--ocsp-url", "http://127.0.0.1:8888",
                     "--mode", "full",
                 ],
                 check=False,
@@ -260,7 +246,6 @@ def main():
             print("[FAIL] Could not find server certificate serial.")
             sys.exit(1)
 
-        # 9. Audit log integrity
         print("\n--- 9. Verifying Audit Log Integrity ---")
         run_cmd(micropki_cmd + [
             "audit", "verify",
