@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "micropki"
+version = "0.1.0"
+description = "A minimal PKI implementation - Root CA with secure key storage"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "cryptography>=42.0.0",
+]
+
+[project.scripts]
+micropki = "micropki.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["micropki*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "perf: marks tests as performance tests (run with --run-perf)",
+]
+

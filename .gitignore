@@ -1,0 +1,44 @@
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.log
+*.key.pem
+*.pem
+*.crt
+*.key
+*.csr
+*.srl
+*.der
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.db
+pki/micropki.db
+venv/
+.env
+secrets/
+.coverage
+htmlcov/
+.mypy_cache/
+*.swp
+*.swo
+*.tmp
+*~
+
+# Python packaging
+*.egg-info/
+*.egg-info
+
+# MicroPKI artifacts
+chain.dat
+policy.txt
+pki/
+downloaded.crl
+
+# Demo artifacts
+demo_pki/
+demo_secrets/
