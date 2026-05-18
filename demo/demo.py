@@ -123,6 +123,7 @@ def main():
             "--san", "dns:demo.example.com",
             "--out-dir", str(demo_pki / "certs"),
             "--db-path", str(demo_pki / "micropki.db"),
+            "--validity-days", "90",
         ])
         run_cmd(micropki_cmd + [
             "ca", "issue-cert",
@@ -134,6 +135,7 @@ def main():
             "--san", "email:client@example.com",
             "--out-dir", str(demo_pki / "certs"),
             "--db-path", str(demo_pki / "micropki.db"),
+            "--validity-days", "90",
         ])
         run_cmd(micropki_cmd + [
             "ca", "issue-ocsp-cert",
@@ -143,6 +145,7 @@ def main():
             "--subject", "/CN=Demo OCSP Responder",
             "--out-dir", str(demo_pki / "certs"),
             "--db-path", str(demo_pki / "micropki.db"),
+            "--validity-days", "90",
         ])
 
         print("\n--- 5. Starting Repo and OCSP Servers ---")
@@ -208,7 +211,26 @@ def main():
         res = run_cmd(micropki_cmd + [
             "ca", "list-certs", "--db-path", str(demo_pki / "micropki.db"), "--format", "json",
         ])
-        certs = json.loads(res.stdout)
+
+        # Parse JSON output (skip any non-JSON lines like banners)
+        output = res.stdout.strip()
+        # Find first { or [ to start parsing
+        start_idx = -1
+        for i, ch in enumerate(output):
+            if ch in '{[':
+                start_idx = i
+                break
+        if start_idx == -1:
+            print("[FAIL] No JSON output from list-certs")
+            sys.exit(1)
+
+        try:
+            certs = json.loads(output[start_idx:])
+        except json.JSONDecodeError as e:
+            print(f"[FAIL] Failed to parse JSON: {e}")
+            print(f"Output: {output[:500]}")
+            sys.exit(1)
+
         server_serial = None
         for c in certs:
             if "demo.example.com" in (c.get("subject") or ""):
